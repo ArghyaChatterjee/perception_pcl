@@ -59,6 +59,8 @@ pcl_ros::VoxelGrid::filter (const PointCloud2::ConstPtr &input,
 {
   if (!input->width)
   {
+    pcl::PCLPointCloud2 pcl_output;
+    pcl_conversions::moveFromPCL(pcl_output, output);
     return;
   }
 
