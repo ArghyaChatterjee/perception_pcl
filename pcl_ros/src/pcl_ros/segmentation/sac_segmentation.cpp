@@ -37,7 +37,6 @@
 
 #include <pluginlib/class_list_macros.h>
 #include "pcl_ros/segmentation/sac_segmentation.h"
-#include <pcl/io/io.h>
 
 #include <pcl_conversions/pcl_conversions.h>
 
@@ -192,7 +191,7 @@ pcl_ros::SACSegmentation::unsubscribe ()
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 void
-pcl_ros::SACSegmentation::config_callback (SACSegmentationConfig &config, uint32_t level)
+pcl_ros::SACSegmentation::config_callback (SACSegmentationConfig &config, uint32_t /*level*/)
 {
   boost::mutex::scoped_lock lock (mutex_);
 
@@ -325,7 +324,7 @@ pcl_ros::SACSegmentation::input_indices_callback (const PointCloudConstPtr &clou
   if (indices && !indices->header.frame_id.empty ())
     indices_ptr.reset (new std::vector<int> (indices->indices));
 
-  impl_.setInputCloud (cloud_tf);
+  impl_.setInputCloud (pcl_ptr(cloud_tf));
   impl_.setIndices (indices_ptr);
 
   // Final check if the data is empty (remember that indices are set to the size of the data -- if indices* = NULL)
@@ -518,7 +517,7 @@ pcl_ros::SACSegmentationFromNormals::axis_callback (const pcl_msgs::ModelCoeffic
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 void
-pcl_ros::SACSegmentationFromNormals::config_callback (SACSegmentationFromNormalsConfig &config, uint32_t level)
+pcl_ros::SACSegmentationFromNormals::config_callback (SACSegmentationFromNormalsConfig &config, uint32_t /*level*/)
 {
   boost::mutex::scoped_lock lock (mutex_);
 
@@ -652,8 +651,8 @@ pcl_ros::SACSegmentationFromNormals::input_normals_indices_callback (
     return;
   }
 
-  impl_.setInputCloud (cloud);
-  impl_.setInputNormals (cloud_normals);
+  impl_.setInputCloud (pcl_ptr(cloud));
+  impl_.setInputNormals (pcl_ptr(cloud_normals));
 
   IndicesPtr indices_ptr;
   if (indices && !indices->header.frame_id.empty ())

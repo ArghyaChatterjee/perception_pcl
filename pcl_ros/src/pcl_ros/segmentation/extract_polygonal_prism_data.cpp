@@ -38,7 +38,6 @@
 #include <pluginlib/class_list_macros.h>
 #include "pcl_ros/transforms.h"
 #include "pcl_ros/segmentation/extract_polygonal_prism_data.h"
-#include <pcl/io/io.h>
 
 #include <pcl_conversions/pcl_conversions.h>
 
@@ -113,7 +112,7 @@ pcl_ros::ExtractPolygonalPrismData::unsubscribe ()
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 void
-pcl_ros::ExtractPolygonalPrismData::config_callback (ExtractPolygonalPrismDataConfig &config, uint32_t level)
+pcl_ros::ExtractPolygonalPrismData::config_callback (ExtractPolygonalPrismDataConfig &config, uint32_t /*level*/)
 {
   double height_min, height_max;
   impl_.getHeightLimits (height_min, height_max);
@@ -190,16 +189,16 @@ pcl_ros::ExtractPolygonalPrismData::input_hull_indices_callback (
       pub_output_.publish (inliers);
       return;
     }
-    impl_.setInputPlanarHull (planar_hull.makeShared ());
+    impl_.setInputPlanarHull (pcl_ptr(planar_hull.makeShared ()));
   }
   else
-    impl_.setInputPlanarHull (hull);
+    impl_.setInputPlanarHull (pcl_ptr(hull));
 
   IndicesPtr indices_ptr;
   if (indices && !indices->header.frame_id.empty ())
     indices_ptr.reset (new std::vector<int> (indices->indices));
 
-  impl_.setInputCloud (cloud);
+  impl_.setInputCloud (pcl_ptr(cloud));
   impl_.setIndices (indices_ptr);
 
   // Final check if the data is empty (remember that indices are set to the size of the data -- if indices* = NULL)

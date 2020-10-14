@@ -43,9 +43,6 @@
 // PCL includes
 #include <pcl/surface/convex_hull.h>
 
-// Dynamic reconfigure
-#include <dynamic_reconfigure/server.h>
-
 namespace pcl_ros
 {
   namespace sync_policies = message_filters::sync_policies;
@@ -56,8 +53,8 @@ namespace pcl_ros
   class ConvexHull2D : public PCLNodelet
   {
     typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
-    typedef PointCloud::Ptr PointCloudPtr;
-    typedef PointCloud::ConstPtr PointCloudConstPtr;
+    typedef boost::shared_ptr<PointCloud> PointCloudPtr;
+    typedef boost::shared_ptr<const PointCloud> PointCloudConstPtr;
 
     private:
       /** \brief Nodelet initialization routine. */

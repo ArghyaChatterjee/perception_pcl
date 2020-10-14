@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>pcl_ros</name>
-  <version>1.6.2</version>
+  <version>1.7.2</version>
   <description>
 
   PCL (Point Cloud Library) ROS interface stack. PCL-ROS is the preferred
@@ -16,6 +16,7 @@
 
   <maintainer email="paul@bovbel.com">Paul Bovbel</maintainer>
   <maintainer email="www.kentaro.wada@gmail.com">Kentaro Wada</maintainer>
+  <maintainer email="stevenmacenski@gmail.com">Steve Macenski</maintainer>
 
   <license>BSD</license>
 
@@ -30,6 +31,7 @@
 
   <depend>dynamic_reconfigure</depend>
   <depend>eigen</depend>
+  <depend>geometry_msgs</depend>
   <depend>message_filters</depend>
   <depend>nodelet</depend>
   <depend>nodelet_topic_tools</depend>
@@ -42,7 +44,9 @@
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
   <depend>tf</depend>
+  <depend>tf2</depend>
   <depend>tf2_eigen</depend>
+  <depend>tf2_ros</depend>
 
   <test_depend>rostest</test_depend>
 

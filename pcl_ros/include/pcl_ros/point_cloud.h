@@ -10,6 +10,7 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <boost/mpl/size.hpp>
 #include <boost/ref.hpp>
+#include <boost/thread/mutex.hpp>
 
 namespace pcl 
 {
@@ -23,18 +24,18 @@ namespace pcl
       template<typename U> void operator() ()
       {
         const char* name = traits::name<PointT, U>::value;
-        uint32_t name_length = strlen(name);
+        std::uint32_t name_length = strlen(name);
         stream_.next(name_length);
         if (name_length > 0)
           memcpy(stream_.advance(name_length), name, name_length);
 
-        uint32_t offset = traits::offset<PointT, U>::value;
+        std::uint32_t offset = traits::offset<PointT, U>::value;
         stream_.next(offset);
 
-        uint8_t datatype = traits::datatype<PointT, U>::value;
+        std::uint8_t datatype = traits::datatype<PointT, U>::value;
         stream_.next(datatype);
 
-        uint32_t count = traits::datatype<PointT, U>::size;
+        std::uint32_t count = traits::datatype<PointT, U>::size;
         stream_.next(count);
       }
 
@@ -48,40 +49,17 @@ namespace pcl
 
       template<typename U> void operator() ()
       {
-        uint32_t name_length = strlen(traits::name<PointT, U>::value);
+        std::uint32_t name_length = strlen(traits::name<PointT, U>::value);
         length += name_length + 13;
       }
 
-      uint32_t length;
+      std::uint32_t length;
     };
   } // namespace pcl::detail
 } // namespace pcl
 
 namespace ros 
 {
-  // In ROS 1.3.1+, we can specialize the functor used to create PointCloud<T> objects
-  // on the subscriber side. This allows us to generate the mapping between message
-  // data and object fields only once and reuse it.
-#if ROS_VERSION_MINIMUM(1, 3, 1)
-  template<typename T>
-  struct DefaultMessageCreator<pcl::PointCloud<T> >
-  {
-    boost::shared_ptr<pcl::MsgFieldMap> mapping_;
-
-    DefaultMessageCreator()
-      : mapping_( boost::make_shared<pcl::MsgFieldMap>() )
-    {
-    }
-    
-    boost::shared_ptr<pcl::PointCloud<T> > operator() ()
-    {
-      boost::shared_ptr<pcl::PointCloud<T> > msg (new pcl::PointCloud<T> ());
-      pcl::detail::getMapping(*msg) = mapping_;
-      return msg;
-    }
-  };
-#endif
-
   namespace message_traits 
   {
     template<typename T> struct MD5Sum<pcl::PointCloud<T> >
@@ -206,15 +184,13 @@ namespace ros
         stream.next(fields);
 
         // Construct field mapping if deserializing for the first time
-        boost::shared_ptr<pcl::MsgFieldMap>& mapping_ptr = pcl::detail::getMapping(m);
-        if (!mapping_ptr)
-        {
-          // This normally should get allocated by DefaultMessageCreator, but just in case
-          mapping_ptr = boost::make_shared<pcl::MsgFieldMap>();
-        }
-        pcl::MsgFieldMap& mapping = *mapping_ptr;
+        static pcl::MsgFieldMap mapping;
+        static boost::mutex mutex;
         if (mapping.empty())
-          pcl::createMapping<T> (fields, mapping);
+        {
+          boost::mutex::scoped_lock lock(mutex);
+          pcl::createMapping<T>(fields, mapping);
+        }
 
         uint8_t is_bigendian;
         stream.next(is_bigendian); // ignoring...
@@ -293,5 +269,126 @@ namespace ros
   /// @todo Printer specialization in message_operations
 
 } // namespace ros
+
+// test if testing machinery can be implemented
+#if defined(__cpp_rvalue_references) && defined(__cpp_constexpr)
+#define ROS_POINTER_COMPATIBILITY_IMPLEMENTED 1
+#else
+#define ROS_POINTER_COMPATIBILITY_IMPLEMENTED 0
+#endif
+
+#if ROS_POINTER_COMPATIBILITY_IMPLEMENTED
+#include <type_traits>  // for std::is_same
+#include <memory>       // for std::shared_ptr
+
+#include <pcl/pcl_config.h>
+#if PCL_VERSION_COMPARE(>=, 1, 11, 0)
+#include <pcl/memory.h>
+#elif PCL_VERSION_COMPARE(>=, 1, 10, 0)
+#include <pcl/make_shared.h>
+#endif
+#endif
+
+namespace pcl
+{
+  namespace detail
+  {
+#if ROS_POINTER_COMPATIBILITY_IMPLEMENTED
+#if PCL_VERSION_COMPARE(>=, 1, 10, 0)
+    template <class T>
+    constexpr static bool pcl_uses_boost = std::is_same<boost::shared_ptr<T>,
+                                                        pcl::shared_ptr<T>>::value;
+#else
+    template <class T>
+    constexpr static bool pcl_uses_boost = true;
+#endif
+
+    template<class SharedPointer> struct Holder
+    {
+      SharedPointer p;
+
+      Holder(const SharedPointer &p) : p(p) {}
+      Holder(const Holder &other) : p(other.p) {}
+      Holder(Holder &&other) : p(std::move(other.p)) {}
+
+      void operator () (...) { p.reset(); }
+    };
+
+    template<class T>
+    inline std::shared_ptr<T> to_std_ptr(const boost::shared_ptr<T> &p)
+    {
+        typedef Holder<std::shared_ptr<T>> H;
+        if(H *h = boost::get_deleter<H>(p))
+        {
+            return h->p;
+        }
+        else
+        {
+            return std::shared_ptr<T>(p.get(), Holder<boost::shared_ptr<T>>(p));
+        }
+    }
+
+    template<class T>
+    inline boost::shared_ptr<T> to_boost_ptr(const std::shared_ptr<T> &p)
+    {
+        typedef Holder<boost::shared_ptr<T>> H;
+        if(H * h = std::get_deleter<H>(p))
+        {
+            return h->p;
+        }
+        else
+        {
+            return boost::shared_ptr<T>(p.get(), Holder<std::shared_ptr<T>>(p));
+        }
+    }
+#endif
+  } // namespace pcl::detail
+
+// add functions to convert to smart pointer used by ROS
+  template <class T>
+  inline boost::shared_ptr<T> ros_ptr(const boost::shared_ptr<T> &p)
+  {
+      return p;
+  }
+
+#if ROS_POINTER_COMPATIBILITY_IMPLEMENTED
+  template <class T>
+  inline boost::shared_ptr<T> ros_ptr(const std::shared_ptr<T> &p)
+  {
+      return detail::to_boost_ptr(p);
+  }
+
+// add functions to convert to smart pointer used by PCL, based on PCL's own pointer
+  template <class T, class = typename std::enable_if<!detail::pcl_uses_boost<T>>::type>
+  inline std::shared_ptr<T> pcl_ptr(const std::shared_ptr<T> &p)
+  {
+      return p;
+  }
+
+  template <class T, class = typename std::enable_if<!detail::pcl_uses_boost<T>>::type>
+  inline std::shared_ptr<T> pcl_ptr(const boost::shared_ptr<T> &p)
+  {
+      return detail::to_std_ptr(p);
+  }
+
+  template <class T, class = typename std::enable_if<detail::pcl_uses_boost<T>>::type>
+  inline boost::shared_ptr<T> pcl_ptr(const std::shared_ptr<T> &p)
+  {
+      return detail::to_boost_ptr(p);
+  }
+
+  template <class T, class = typename std::enable_if<detail::pcl_uses_boost<T>>::type>
+  inline boost::shared_ptr<T> pcl_ptr(const boost::shared_ptr<T> &p)
+  {
+      return p;
+  }
+#else
+  template <class T>
+  inline boost::shared_ptr<T> pcl_ptr(const boost::shared_ptr<T> &p)
+  {
+      return p;
+  }
+#endif
+} // namespace pcl
 
 #endif

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0.2)
 project(pcl_conversions)
 
 find_package(catkin REQUIRED COMPONENTS)
@@ -32,6 +32,7 @@ install(DIRECTORY include/${PROJECT_NAME}/
 )
 
 if(CATKIN_ENABLE_TESTING)
+  find_package(Boost REQUIRED COMPONENTS iostreams)
   find_package(catkin REQUIRED COMPONENTS roscpp pcl_msgs sensor_msgs std_msgs)
   include_directories(
     include
@@ -40,5 +41,5 @@ if(CATKIN_ENABLE_TESTING)
     ${EIGEN3_INCLUDE_DIRS})
 
   catkin_add_gtest(test_pcl_conversions test/test_pcl_conversions.cpp)
-  target_link_libraries(test_pcl_conversions ${catkin_LIBRARIES})
+  target_link_libraries(test_pcl_conversions ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 endif()
