@@ -3,7 +3,11 @@
 
 #include <ros/ros.h>
 #include <pcl/point_cloud.h>
+#if PCL_VERSION_COMPARE(>=, 1, 12, 0)
+#include <pcl/type_traits.h>
+#else
 #include <pcl/point_traits.h>
+#endif
 #include <pcl/for_each_type.h>
 #include <pcl/conversions.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -11,6 +15,7 @@
 #include <boost/mpl/size.hpp>
 #include <boost/ref.hpp>
 #include <boost/thread/mutex.hpp>
+
 
 namespace pcl 
 {
