@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+    <node pkg="nodelet" type="nodelet" name="transform_points_base_link" args="standalone pcl/PassThrough">
+        <remap from="~input" to="anymal_c/front_laser/points"/>
+        <remap from="~output" to="anymal_c/front_laser/points/transformed"/>
+        <rosparam subst_value="true">
+            filter_field_name: z
+            filter_limit_min: -100
+            filter_limit_max: 100
+            output_frame: anymal_c
+        </rosparam>
+    </node>
+</launch>
