@@ -17,8 +17,18 @@ roslaunch filters anymal_c_pass_through_filter.launch
 
 ## ANYmal_C Voxelgrid Filter
 Added a launch file for ANYmal_C robot for random filtering points.
+
+## Launch
 ```
 roslaunch filters anymal_c_voxel_grid_filter.launch
+```
+
+## ANYmal_C Transform Filter
+Added a launch file for ANYmal_C robot for transforming the pointcloud to another link (given tf/static_tf).
+
+## Launch
+```
+roslaunch filters anymal_c_transform_filter.launch
 ```
 
 ## Wiki
